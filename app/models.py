@@ -9,8 +9,8 @@ db = SQLAlchemy()
 class User(db.Model):
     __tablename__ = 'users'
     id = db.Column(db.Integer, primary_key=True)
-    mail = db.Column(db.String(320), nullable=False)
-    password = db.Column(db.String(30), nullable=False)
+    mail = db.Column(db.String(320), nullable=False, unique=True)
+    password = db.Column(db.String(128), nullable=False)
     orders = db.relationship("Order")
 
 
