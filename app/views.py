@@ -15,9 +15,10 @@ def get_cart_text():
     if not number_of_dishes:
         return 'Корзина пуста'
     sum = 0
-    for dish_in_cart in dishes_in_cart:
+    for dish_in_cart, dish_amount in dishes_in_cart.items():
         dish_in_cart_entity = db.session.query(Dish).get(dish_in_cart)
-        sum += dish_in_cart_entity.price
+        sum += dish_in_cart_entity.price * dish_amount
+        print(dish_amount)
     return f'В корзине {number_of_dishes} {decline_dish(number_of_dishes)} на сумму {sum} руб'
 
 
@@ -37,6 +38,7 @@ def get_username_from_session():
     if user:
         username = user['username']
     return username
+
 
 @app.route('/')
 def render_main():
@@ -95,6 +97,7 @@ def render_auth():
             session["user"] = {
                 "id": user.id,
                 "username": user.username,
+                "mail": user.mail,
                 "role": user.role,
             }
             return redirect("/")
@@ -118,52 +121,68 @@ def render_account():
 @app.route('/cart')
 def render_cart():
     username = get_username_from_session()
-    print(username)
-    is_auth = bool(session.get('user'))
-    if not is_auth:
-        return redirect(url_for('render_auth'))
-
-    dish_ids = session.get(SESSION_KEY_OF_CART, [])
+    dishes_dict = session.get(SESSION_KEY_OF_CART, [])
     dishes = []
-    summ = 0
-    for dish_id in dish_ids:
+    sum = 0
+    for dish_id, dish_amount in dishes_dict.items():
         dish = db.session.query(Dish).get(dish_id)
-        dishes.append(dish)
-        summ += dish.price
-    form = OrderForm(order_summ=summ, order_cart=dish_ids)
-    return render_template('cart.html', dishes=dishes, form=form, decline_dish=decline_dish, username=username)
+        dishes.append({
+            'id': dish.id,
+            'price': dish.price,
+            'title': dish.title,
+            'amount': dish_amount
+        })
+        sum += dish.price * dish_amount
+    form = OrderForm(order_sum=sum, order_cart=dishes_dict)
+
+    is_auth = bool(session.get('user'))
+    return render_template('cart.html', dishes=dishes, form=form, decline_dish=decline_dish, username=username,
+                           is_auth=is_auth, sum=sum)
 
 
 @app.route('/ordered', methods=['POST'])
 def render_ordered():
     form = OrderForm()
-    name = form.name.data
+    client_name = form.client_name.data
     address = form.address.data
-    email = form.email.data
     phone = form.phone.data
-    order_summ = form.order_summ.data
+    order_sum = form.order_sum.data
     dish_list = form.order_cart.data
+    username = get_username_from_session()
+
     order = Order(date=time.time(),
-                  order_price=order_summ,
-                  status='NEW',
+                  client_name=client_name,
+                  order_sum=order_sum,
                   phone=phone,
                   address=address,
                   dish_list=dish_list,
-                  owner=db.session.query(User).get())
-    return render_template('ordered.html')
+                  owner=User.query.filter_by(username=username).first(),
+                  status='NEW')
+    db.session.add(order)
+    db.session.commit()
+    mail = session['user']['mail']
+    return render_template('ordered.html', mail=mail)
 
 
 @app.route('/add_to_cart/<int:dish_id>')
 def add_to_cart(dish_id):
-    dishes = session.get(SESSION_KEY_OF_CART, [])
-    dishes.append(dish_id)
-    session[SESSION_KEY_OF_CART] = dishes
+    dishes_dict = session.get(SESSION_KEY_OF_CART, {})
+    print(dishes_dict)
+    dish_amount = dishes_dict.get(str(dish_id), 0)
+    dishes_dict[str(dish_id)] = dish_amount + 1
+    session[SESSION_KEY_OF_CART] = dishes_dict
     return redirect(url_for('render_main'))
 
 
 @app.route('/delete_from_cart/<int:dish_id>')
 def delete_from_cart(dish_id):
-    dishes = session.get(SESSION_KEY_OF_CART, [])
-    dishes.remove(dish_id)
-    session[SESSION_KEY_OF_CART] = dishes
+    dishes_dict = session.get(SESSION_KEY_OF_CART, {})
+    del dishes_dict[dish_id]
+    session[SESSION_KEY_OF_CART] = dishes_dict
+    return redirect(url_for('render_cart'))
+
+
+@app.route('/clear_cart')
+def clear_cart():
+    session[SESSION_KEY_OF_CART] = []
     return redirect(url_for('render_cart'))

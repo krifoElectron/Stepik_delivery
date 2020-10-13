@@ -53,3 +53,12 @@ a, a:hover {
 .blue-text {
     color: #007bff;
 }
+
+.red-link {
+    color: #dc3545 !important;
+    cursor: pointer !important;
+    margin-left: auto;
+    width: fit-content;
+    display: block;
+    padding: .75rem;
+}

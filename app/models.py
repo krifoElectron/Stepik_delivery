@@ -49,10 +49,11 @@ class Order(db.Model):
     __tablename__ = 'orders'
     id = db.Column(db.Integer, primary_key=True)
     date = db.Column(db.String, nullable=False)
-    order_price = db.Column(db.Integer, nullable=False)
-    status = db.Column(db.String, nullable=False)
+    client_name = db.Column(db.String, nullable=False)
+    order_sum = db.Column(db.Float, nullable=False)
     phone = db.Column(db.String, nullable=False)
     address = db.Column(db.String, nullable=False)
     dish_list = db.Column(db.String, nullable=False)
     owner_id = db.Column(db.Integer, db.ForeignKey("users.id"))
     owner = db.relationship("User")
+    status = db.Column(db.String, nullable=False)

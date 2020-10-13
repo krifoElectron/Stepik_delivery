@@ -21,10 +21,9 @@ class AuthFrom(FlaskForm):
 
 
 class OrderForm(FlaskForm):
-    name = StringField('Ваше имя')
+    client_name = StringField('Ваше имя')
     address = StringField('Адрес')
-    email = EmailField('Электропочта')
     phone = StringField('Ваш телефон')
-    order_summ = HiddenField()
+    order_sum = HiddenField()
     order_cart = HiddenField()
     submit = SubmitField('Оформить заказ')
